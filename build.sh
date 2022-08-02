@@ -23,7 +23,7 @@ aomCompile () {
         cmd="${cmd%%${match}*} ${cmd##*$match}"
         if grep lpthread err.log > /dev/null
         then
-          eval $cmd 2> err.log
+          eval $cmd 2>> err.log
         fi
       fi
       if grep android_getCpuFeatures err.log > /dev/null
