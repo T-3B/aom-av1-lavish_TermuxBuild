@@ -4,7 +4,7 @@ An automated script to build aom-av1-psy full_build-alpha-4 in Termux, with poss
 ### Run the script
 Once downloaded, run `chmod +x build.sh` (the script should not be in `~/storage/*` ! ).\
 Then simply `./build.sh`. It will create a folder for each GitHub repo cloned.\
-**Make sure you are connected to the Internet until the script is completely finished!**
+**Make sure you are connected to the Internet until the script is completely finished!**\
 To build aom-av1-psy with LibVMAF, just add the arg "--enable-libvmaf" : `./build.sh --enable-livmaf`.
 
 ### Automatisation to its max
