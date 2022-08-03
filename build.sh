@@ -1,13 +1,21 @@
 ### This script will create and build aomenc-psy, with possibly
-### --enable-libvmaf. One folder will be created for each cloned repo
+### --enable-libvmaf. One folder will be created for each cloned repo.
+### Execute with --install-all if you want to install every aom-tools (default is to copy only aomenc to $PREFIX/bin)
 ### This script won't update things, just create. So if you want to update,
 ### first change the current directory (or delete old files)
 
 aomCompile () {
   local match
   local cmd
+  local condition
+  if [ "$1" = "--install-all" ] || [ "$2" = "--install-all" ]
+  then
+    condition="[ -z \"$(cat err.log)\" ]"
+  else
+    condition="[ -f aomenc ]"
+  fi
   echo a > err.log
-  until [ -z "$(cat err.log)" ]
+  until eval $condition
   do
     make VERBOSE=1 2> err.log | tee cmd.log | grep %
     cmd="$(grep -e bin/cc -e bin/c++ cmd.log | tail -1)"
@@ -47,7 +55,7 @@ cmake --build . -- -j$(nproc)
 make install
 echo -e "\n\033[0;32mCPU-Features installed correctly !\033[0m\n"
 cd "$baseDir"
-if [ "$1" = "--enable-libvmaf" ]
+if [ "$1" = "--enable-libvmaf" ] || [ "$2" = "--enable-libvmaf" ]
 then
   cmakeArgs+="-DCONFIG_TUNE_VMAF=1"
   echo y | pkg i ninja
@@ -66,8 +74,13 @@ git clone https://github.com/BlueSwordM/aom-av1-psy -b full_build-alpha-4 aom-av
 mkdir aom-av1-psy-ba4/mybuild
 cd aom-av1-psy-ba4/mybuild
 cmake .. -DCMAKE_BUILD_TYPE=Release $cmakeArgs -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS" --install-prefix "$PREFIX"
-aomCompile
+aomCompile $1 $2
 wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py
 find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 align_fix.py {} \;
-make install
+if [ "$1" = "--install-all" ] || [ "$2" = "--install-all" ]
+then
+  make install
+else
+  cp aomenc $PREFIX/bin
+fi
 echo -e "\n\033[0;32mAom-av1-psy installed correctly ! Congratulations !\033[0m\n"
