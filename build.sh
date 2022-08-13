@@ -5,20 +5,19 @@
 ### first change the current directory (or delete old files)
 
 aomCompile () {
-  local match
-  local cmd
-  local condition
+  local match cmd condition percent=-1
   if [ "$1" = "--install-all" ] || [ "$2" = "--install-all" ]
   then
-    condition="[ -z \"$(cat err.log)\" ]"
+    condition='[ -z "$(cat err.log)" ]'
   else
     condition="[ -f aomenc ]"
   fi
   echo a > err.log
   until eval $condition
   do
-    make VERBOSE=1 2> err.log | tee cmd.log | grep %
+    make VERBOSE=1 2> err.log | awk -v a="$percent" '/%/ {if (substr($0,2,3)+0 > a+0) {a=substr($0,2,3); printf "%s\r",substr($0,1,6)}} {print > "cmd.log"}'
     cmd="$(grep -e bin/cc -e bin/c++ cmd.log | tail -1)"
+    percent="$(grep % cmd.log | tail -1 | cut -c 2-4)"
     if grep cpu-features.h err.log > /dev/null
     then
       match="/data/data/com.termux/files/usr/bin/cc"
@@ -44,43 +43,52 @@ aomCompile () {
   rm err.log cmd.log
 }
 
-FLAGS="-O3 -flto -mtune=$(llc --version | grep "Host CPU:" | tail -c +13) --target=$(llc --version | grep "Default target:" | tail -c +19)"
-baseDir="$PWD"
-echo y | pkg i perl cmake doxygen yasm ndk-multilib git wget
-git clone https://github.com/google/cpu_features cpu_features
+termux-wake-lock
+FLAGS="-O3 -flto --target=$(llc --version | grep "Default target:" | tail -c +19) -mtune=$(llc --version | grep "Host CPU:" | tail -c +13)"
+echo y | pkg up &> /dev/null
+echo y | pkg i perl cmake doxygen yasm ndk-multilib git wget &> /dev/null
+
+echo -n "Compiling CPU-Features..."
+git clone https://github.com/google/cpu_features cpu_features &> /dev/null
+wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py &> /dev/null
 mkdir cpu_features/mybuild
 cd cpu_features/mybuild
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS" --install-prefix "$PREFIX"
-cmake --build . -- -j$(nproc)
-make install
-echo -e "\n\033[0;32mCPU-Features installed correctly !\033[0m\n"
-cd "$baseDir"
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS" -DBUILD_SHARED_LIBS=OFF --install-prefix "$PREFIX" &> /dev/null
+cmake --build . -- -j$(nproc) &> /dev/null
+find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip -s {} \;
+make install &> /dev/null
+echo -e "\033[0;32m Installed successfully!\033[0m"
+cd ../..
 if [ "$1" = "--enable-libvmaf" ] || [ "$2" = "--enable-libvmaf" ]
 then
   cmakeArgs+="-DCONFIG_TUNE_VMAF=1"
-  echo y | pkg i ninja
-  pip install meson
-  git clone https://github.com/Netflix/vmaf vmaf
+  echo y | pkg i ninja &> /dev/null
+  pip install meson &> /dev/null
+  echo -n "Compiling LibVMAF..."
+  git clone https://github.com/Netflix/vmaf vmaf &> /dev/null
   mkdir vmaf/libvmaf/mybuild
   cd vmaf/libvmaf/mybuild
-  meson .. --buildtype=release --default-library=both -Db_lto=true -Dc_args="$FLAGS" -Dcpp_args="$FLAGS" -Dprefix="$PREFIX"
-  ninja
-  ninja install
-  cd "$baseDir"
-  echo -e "\n\033[0;32mLibVMAF installed correctly !\033[0m\n"
+  meson .. --buildtype=release --default-library=static --prefer-static --strip -Db_lto=true -Dc_args="$FLAGS" -Dcpp_args="$FLAGS" -Dprefix="$PREFIX" &> /dev/null
+  ninja &> /dev/null
+  ninja install &> /dev/null
+  echo -e "\033[0;32m Installed successfully!\033[0m"
+  cd ../../..
 fi
 
-git clone https://github.com/BlueSwordM/aom-av1-psy -b full_build-alpha-4 aom-av1-psy-ba4
-mkdir aom-av1-psy-ba4/mybuild
-cd aom-av1-psy-ba4/mybuild
-cmake .. -DCMAKE_BUILD_TYPE=Release $cmakeArgs -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS" --install-prefix "$PREFIX"
+echo "Compiling aom-av1-psy-build_alpha4..."
+git clone https://github.com/BlueSwordM/aom-av1-psy -b full_build-alpha-4 aom-av1-psy-ba4 &> /dev/null
+echo "You can now disconnect your device from the Internet."
+mkdir aom-av1-psy-ba4/mybuild &> /dev/null
+cd aom-av1-psy-ba4/mybuild &> /dev/null
+cmake .. -DCMAKE_BUILD_TYPE=Release $cmakeArgs -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS" -DBUILD_SHARED_LIBS=OFF --install-prefix "$PREFIX" &> /dev/null
 aomCompile $1 $2
-wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py
-find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 align_fix.py {} \;
+find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip -s {} \;
 if [ "$1" = "--install-all" ] || [ "$2" = "--install-all" ]
 then
   make install
 else
-  cp aomenc $PREFIX/bin
+  cp -f aomenc $PREFIX/bin
 fi
-echo -e "\n\033[0;32mAom-av1-psy installed correctly ! Congratulations !\033[0m\n"
+echo -e "\033[0;32mAom-av1-psy installed successfully! Congratulations!\033[0m"
+termux-toast -g bottom -b green -c black "Aom-av1-psy installed successfully!"
+termux-wake-unlock
