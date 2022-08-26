@@ -33,7 +33,6 @@ aomCompile() {
 			fi
 		fi
 	done
-	rm err.log cmd.log
 }
 
 termux-wake-lock
@@ -66,7 +65,8 @@ then
 	meson .. --buildtype=release --default-library=static --prefer-static --strip -Db_lto=true -Dc_args="$FLAGS" -Dcpp_args="$FLAGS" -Dprefix=$PREFIX &> /dev/null
 	ninja install &> /dev/null
 	cd ../../..
-	echo -e "\033[0;32m Installed successfully!\033[0m"
+	mv -f vmaf/model $PREFIX/share
+	echo -e '\033[0;32m Installed successfully!\033[0m The VMAF models are located here : `$PREFIX/share/model/*`.'
 fi
 
 echo "Compiling aom-av1-psy-build_alpha4..."
@@ -80,6 +80,7 @@ aomCompile
 find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip {} \;
 make install &> /dev/null
 cd ../..
+rm -rf align_fix.py vmaf aom-av1-psy-ba4 cpu_features
 echo -e "\033[0;32mAom-av1-psy installed successfully! Congratulations!\033[0m"
 termux-toast -g bottom -b green -c black "Aom-av1-psy installed successfully!" &> /dev/null
 termux-wake-unlock
