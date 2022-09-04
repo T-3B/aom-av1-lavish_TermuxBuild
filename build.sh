@@ -1,10 +1,15 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 ### This script will download and build aom-av1-psy_build-alpha4, with possibly
-### --enable-libvmaf. One folder will be created for each cloned repo.
+### --enable-libvmaf. One folder will be created for each cloned repo (+ a python script).
 ### Execute with --install-all if you want to install every aom-tools (otherwise only aomenc will be installed).
 ### This script won't update things, just install. So if you want to "update",
 ### first change the current directory (or delete old files/folders), and the script will override existing binaries (if any).
+
+errorBuilding() {
+	echo -e "\033[0;31m${1}\033[0m"
+	exit 1
+}
 
 aomCompile() {
 	local match cmd percent="$(tail -1 cmd.log | cut -c 2-4)"
@@ -36,17 +41,17 @@ aomCompile() {
 }
 
 termux-wake-lock
-FLAGS="-static -O3 -flto --target=$(llc --version | grep "Default target:" | tail -c +19) -mtune=$(llc --version | grep "Host CPU:" | tail -c +13)"
+flags="-O3 -flto" #meson does not support -static in cflags/cppflags
 pkg up -y &> /dev/null
 pkg i -y perl cmake doxygen yasm ndk-multilib git wget &> /dev/null
 
 echo -n "Compiling CPU-Features..."
-git clone https://github.com/google/cpu_features cpu_features &> /dev/null
-wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py &> /dev/null
+git clone https://github.com/google/cpu_features cpu_features &> /dev/null || errorBuilding "Could not clone cpu_features, check your Internet connection."
+wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py &> /dev/null  || errorBuilding "Could not get a python script, check your Internet connection."
 mkdir cpu_features/mybuild
 cd cpu_features/mybuild
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS" -DBUILD_SHARED_LIBS=OFF --install-prefix $PREFIX &> /dev/null
-make -j$(nproc) &> /dev/null
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-static $flags" -DCMAKE_CXX_FLAGS="-static $flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX &> /dev/null
+make -j$(nproc) &> /dev/null || errorBuilding "Could not compile cpu_features."
 find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip {} \;
 make install &> /dev/null
 cd ../..
@@ -59,28 +64,30 @@ then
 	pkg i -y ninja &> /dev/null
 	pip install -U meson &> /dev/null
 	echo -n "Compiling LibVMAF..."
-	git clone https://github.com/Netflix/vmaf vmaf &> /dev/null
+	git clone https://github.com/Netflix/vmaf vmaf &> /dev/null || errorBuilding "Could not clone libvmaf, check your Internet connection."
 	mkdir vmaf/libvmaf/mybuild
 	cd vmaf/libvmaf/mybuild
-	meson .. --buildtype=release --default-library=static --prefer-static --strip -Db_lto=true -Dc_args="$FLAGS" -Dcpp_args="$FLAGS" -Dprefix=$PREFIX &> /dev/null
-	ninja install &> /dev/null
+	meson .. --buildtype=release --default-library=static --prefer-static --strip -Db_lto=true -Dc_args="$flags" -Dcpp_args="$flags" -Dprefix=$PREFIX &> /dev/null
+	ninja install &> /dev/null || errorBuilding "Could not compile libvmaf."
 	cd ../../..
+	rm -rf $PREFIX/share/model #remove old vmaf models
 	mv -f vmaf/model $PREFIX/share
-	echo -e '\033[0;32m Installed successfully!\033[0m The VMAF models are located here : `$PREFIX/share/model/*`.'
+	echo -e '\033[0;32m Installed successfully!\033[0m\nThe VMAF models are located here : `$PREFIX/share/model/*`.'
 fi
 
 echo "Compiling aom-av1-psy-build_alpha4..."
-git clone https://github.com/BlueSwordM/aom-av1-psy -b full_build-alpha-4 aom-av1-psy-ba4 &> /dev/null
+git clone https://github.com/BlueSwordM/aom-av1-psy -b full_build-alpha-4 aom-av1-psy-ba4 &> /dev/null || errorBuilding "Could not clone aom-av1-psy, check your Internet connection."
 echo "You can now disconnect your device from the Internet."
 mkdir aom-av1-psy-ba4/mybuild
 cd aom-av1-psy-ba4/mybuild
-cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX &> /dev/null
+cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="-static $flags" -DCMAKE_CXX_FLAGS="-static $flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX &> /dev/null || errorBuilding "Could not compile aom-av1-psy."
 make -j$(nproc) -k 2> /dev/null | awk '/%/ {printf "%s\r",substr($0,1,6); print > "cmd.log"}'
 aomCompile
+[ -f aomenc ] || errorBuilding "Could not compile aom-av1-psy."
 find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip {} \;
 make install &> /dev/null
 cd ../..
-rm -rf align_fix.py vmaf aom-av1-psy-ba4 cpu_features
+# rm -rf align_fix.py vmaf aom-av1-psy-ba4 cpu_features
 echo -e "\033[0;32mAom-av1-psy installed successfully! Congratulations!\033[0m"
 termux-toast -g bottom -b green -c black "Aom-av1-psy installed successfully!" &> /dev/null
 termux-wake-unlock
