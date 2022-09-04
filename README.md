@@ -15,7 +15,7 @@ The VMAF models will be located to `$PREFIX/share/model/*`. They are needed when
 
 ### Automatisation to its max
 Don't want to do anything but just copy-paste ? Here you go:\
-`echo y | pkg i wget && wget https://raw.githubusercontent.com/T-3B/aom-av1-psy_TermuxBuild/main/build.sh && chmod +x build.sh && ./build.sh --enable-libvmaf`\
+`pkg i -y wget && wget https://raw.githubusercontent.com/T-3B/aom-av1-psy_TermuxBuild/main/build.sh && chmod +x build.sh && ./build.sh --enable-libvmaf`\
 I recommend using vmaf tunes when using aomenc, but you're the boss ≧◡≦
 
 
