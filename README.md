@@ -1,6 +1,6 @@
 # aom-av1-psy_TermuxBuild
 
-An automated script to build [aom-av1-psy full_build-alpha-4](https://github.com/BlueSwordM/aom-av1-psy/tree/full_build-alpha-4) in Termux (Android), with possible [LibVMAF](https://github.com/Netflix/vmaf/tree/master/libvmaf) support.\
+An automated script to build [aom-av1-psy Ebdless_Possibility](https://github.com/BlueSwordM/aom-av1-psy/tree/Endless_Possibility) in Termux (Android), with possible [LibVMAF](https://github.com/Netflix/vmaf/tree/master/libvmaf) support.\
 Under the hood, it will also compile [cpu_features](https://github.com/google/cpu_features).
 
 **Make sure you are connected to the Internet until the script says you're done with it!**\
