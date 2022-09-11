@@ -8,6 +8,7 @@
 
 errorBuilding() {
 	echo -e "\033[0;31m${1}\033[0m"
+	termux-wake-unlock
 	exit 1
 }
 
@@ -41,11 +42,11 @@ aomCompile() {
 }
 
 termux-wake-lock
-flags="-O3 -flto" #meson does not support -static in cflags/cppflags
+flags="-O3 -flto -mtune=cortex-a76" #meson does not support -static in cflags/cppflags
 pkg up -y &> /dev/null
 pkg i -y perl cmake doxygen yasm ndk-multilib git wget &> /dev/null
 
-echo -n "Compiling CPU-Features..."
+echo -n "Building CPU-Features..."
 git clone https://github.com/google/cpu_features cpu_features &> /dev/null || errorBuilding "Could not clone cpu_features, check your Internet connection."
 wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py &> /dev/null  || errorBuilding "Could not get a python script, check your Internet connection."
 mkdir cpu_features/mybuild
@@ -63,7 +64,7 @@ then
 	aomArgs+="-DCONFIG_TUNE_VMAF=1"
 	pkg i -y ninja &> /dev/null
 	pip install -U meson &> /dev/null
-	echo -n "Compiling LibVMAF..."
+	echo -n "Building LibVMAF..."
 	git clone https://github.com/Netflix/vmaf vmaf &> /dev/null || errorBuilding "Could not clone libvmaf, check your Internet connection."
 	mkdir vmaf/libvmaf/mybuild
 	cd vmaf/libvmaf/mybuild
@@ -75,11 +76,11 @@ then
 	echo -e '\033[0;32m Installed successfully!\033[0m\nThe VMAF models are located here : `$PREFIX/share/model/*`.'
 fi
 
-echo "Compiling aom-av1-psy-build_alpha4..."
-git clone https://github.com/BlueSwordM/aom-av1-psy -b full_build-alpha-4 aom-av1-psy-ba4 &> /dev/null || errorBuilding "Could not clone aom-av1-psy, check your Internet connection."
+echo "Building aom-av1-psy_Endless-Possibility..."
+git clone https://github.com/BlueSwordM/aom-av1-psy -b Endless_Possibility aom-av1-psy_ep &> /dev/null || errorBuilding "Could not clone aom-av1-psy, check your Internet connection."
 echo "You can now disconnect your device from the Internet."
-mkdir aom-av1-psy-ba4/mybuild
-cd aom-av1-psy-ba4/mybuild
+mkdir aom-av1-psy_ep/mybuild
+cd aom-av1-psy_ep/mybuild
 cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="-static $flags" -DCMAKE_CXX_FLAGS="-static $flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX &> /dev/null || errorBuilding "Could not compile aom-av1-psy."
 make -j$(nproc) -k 2> /dev/null | awk '/%/ {printf "%s\r",substr($0,1,6); print > "cmd.log"}'
 aomCompile
@@ -87,7 +88,7 @@ aomCompile
 find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip {} \;
 make install &> /dev/null
 cd ../..
-# rm -rf align_fix.py vmaf aom-av1-psy-ba4 cpu_features
+# rm -rf align_fix.py vmaf aom-av1-psy_ep cpu_features
 echo -e "\033[0;32mAom-av1-psy installed successfully! Congratulations!\033[0m"
 termux-toast -g bottom -b green -c black "Aom-av1-psy installed successfully!" &> /dev/null
 termux-wake-unlock
