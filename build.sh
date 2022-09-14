@@ -42,7 +42,7 @@ aomCompile() {
 }
 
 termux-wake-lock
-flags="-O3 -flto -mtune=cortex-a76" #meson does not support -static in cflags/cppflags
+flags="-O3 -flto" #meson does not support -static in cflags/cppflags
 pkg up -y &> /dev/null
 pkg i -y perl cmake doxygen yasm ndk-multilib git wget &> /dev/null
 
