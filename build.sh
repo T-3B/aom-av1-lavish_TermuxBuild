@@ -61,7 +61,7 @@ echo -e "\033[0;32m Installed successfully!\033[0m"
 [ "$1" = "--install-all" ] || [ "$2" = "--install-all" ] || aomArgs="-DENABLE_TOOLS=0 -DCONFIG_AV1_DECODER=0 -DENABLE_DOCS=0 -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0"
 if [ "$1" = "--enable-libvmaf" ] || [ "$2" = "--enable-libvmaf" ]
 then
-	aomArgs+="-DCONFIG_TUNE_VMAF=1"
+	aomArgs+=" -DCONFIG_TUNE_VMAF=1"
 	pkg i -y ninja &> /dev/null
 	pip install -U meson &> /dev/null
 	echo -n "Building LibVMAF..."
