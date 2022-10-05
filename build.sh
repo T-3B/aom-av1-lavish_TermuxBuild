@@ -43,7 +43,7 @@ aomCompile() {
 
 termux-wake-lock
 flags="-O3 -flto" #meson does not support -static in cflags/cppflags
-pkg up -y &> /dev/null
+pkg upgrade -y &> /dev/null
 pkg i -y perl cmake doxygen yasm ndk-multilib git wget &> /dev/null
 
 echo -n "Building CPU-Features..."
