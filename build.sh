@@ -8,6 +8,7 @@
 
 errorBuilding() {
 	echo -e "\033[0;31m${1}\033[0m"
+	cat buildingErr.log
 	termux-wake-unlock
 	exit 1
 }
@@ -53,13 +54,13 @@ then
 fi
 
 echo 'Building aom-av1-lavish_Endless_Merging...'
-git clone https://github.com/Clybius/aom-av1-lavish -b Endless_Merging aom-av1-lavish_em &> /dev/null || errorBuilding 'Could not clone aom-av1-lavish, check your Internet connection.'
-wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py &> /dev/null  || errorBuilding 'Could not get a python script, check your Internet connection.'
+git clone https://github.com/Clybius/aom-av1-lavish -b Endless_Merging aom-av1-lavish_em >/dev/null 2>>buildingErr.log || errorBuilding 'Could not clone aom-av1-lavish, check your Internet connection.'
+wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py >/dev/null 2>>buildingErr.log  || errorBuilding 'Could not get a python script, check your Internet connection.'
 echo 'You can now disconnect your device from the Internet.'
 mkdir aom-av1-lavish_em/mybuild
 cd aom-av1-lavish_em/mybuild
-cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX &> /dev/null || errorBuilding "Could not compile aom-av1-psy."
-make -kj$(nproc) 2> /dev/null | awk '/%/ {printf "%s\r",substr($0,1,6); print > "cmd.log"}'
+cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX >/dev/null 2>>buildingErr.log || errorBuilding "Could not configure aom-av1-lavish."
+make -kj$(nproc) 2>>buildingErr.log | awk '/%/ {printf "%s\r",substr($0,1,6); print > "cmd.log"}'
 aomCompile
 [ -f aomenc ] || errorBuilding 'Could not compile aom-av1-lavish.'
 find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip {} \;
