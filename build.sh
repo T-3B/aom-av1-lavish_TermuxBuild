@@ -34,7 +34,7 @@ termux-wake-lock
 echo 'You can now let the program run in background.' && sleep 1
 flags='-O3 -flto -static'
 pkg upgrade -y
-pkg i -y libcpufeatures perl cmake doxygen yasm ndk-multilib git wget
+pkg i -y libcpufeatures perl cmake doxygen yasm ndk-multilib-native-static git wget binutils-bin
 
 aomArgs='-DENABLE_TOOLS=0 -DCONFIG_AV1_DECODER=0 -DENABLE_DOCS=0 -DENABLE_TESTS=0'
 if [ "$1" = --enable-libvmaf ] || [ "$2" = --enable-libvmaf ]
@@ -53,18 +53,18 @@ fi
 
 echo 'Building aom-av1-lavish_Endless_Merging...'
 git clone https://github.com/Clybius/aom-av1-lavish -b Endless_Merging aom-av1-lavish_em
-wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py
+wget -4 https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py
 echo 'You can now disconnect your device from the Internet.' && sleep 1
 mkdir aom-av1-lavish_em/mybuild
 cd aom-av1-lavish_em/mybuild
 cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX
 make -kj$(nproc)
-#aomCompile
+aomCompile
 [ -f aomenc ] || { echo 'Could not compile aom-av1-lavish.'; exit 1;}
 find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {}\; -exec strip {} \;
 make install
 cd ../..
-# rm -rf align_fix.py aom-av1-lavish_em
+rm -rf align_fix.py aom-av1-lavish_em
 echo -e '\033[0;32mAom-av1-lavish installed successfully! Congratulations!\033[0m'
 termux-toast -g bottom -b green -c black 'Aom-av1-lavish installed successfully!' &> /dev/null
 termux-wake-unlock
