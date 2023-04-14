@@ -6,12 +6,8 @@
 ### This script won't update things, just install. So if you want to "update",
 ### first change the current directory (or delete old files/folders), and the script will override existing binaries (if any).
 
-errorBuilding() {
-	echo -e "\033[0;31m${1}\033[0m"
-	cat buildingErr.log
-	termux-wake-unlock
-	exit 1
-}
+set -e
+
 
 aomCompile() {
 	local match cmd percent="$(tail -1 cmd.log | cut -c 2-4)"
@@ -35,36 +31,38 @@ aomCompile() {
 }
 
 termux-wake-lock
-echo 'You can now let the program run in background.'
+echo 'You can now let the program run in background.' && sleep 1
 flags='-O3 -flto -static'
-pkg upgrade -y &> /dev/null
-pkg i -y libcpufeatures perl cmake doxygen yasm ndk-multilib git wget &> /dev/null
+pkg upgrade -y
+pkg i -y libcpufeatures perl cmake doxygen yasm ndk-multilib git wget
 
 aomArgs='-DENABLE_TOOLS=0 -DCONFIG_AV1_DECODER=0 -DENABLE_DOCS=0 -DENABLE_TESTS=0'
-if [ "$1" = '--enable-libvmaf' ] || [ "$2" = '--enable-libvmaf' ]
+if [ "$1" = --enable-libvmaf ] || [ "$2" = --enable-libvmaf ]
 then
+	echo 'Will build aomenc with libvmaf.' && sleep 1
 	aomArgs+=' -DCONFIG_TUNE_VMAF=1'
-	pkg i -y libvmaf-static &> /dev/null
+	pkg i -y libvmaf-static
 fi
 
-if [ "$1" = '--enable-butteraugli' ] || [ "$2" = '--enable-butteraugli' ]
+if [ "$1" = --enable-butteraugli ] || [ "$2" = --enable-butteraugli ]
 then
+	echo 'Will build aomenc with butteraugli.' && sleep 1
   aomArgs+=' -DCONFIG_TUNE_BUTTERAUGLI=1'
-  pkg i -y libjxl-static &> /dev/null
+  pkg i -y libjxl-static
 fi
 
 echo 'Building aom-av1-lavish_Endless_Merging...'
-git clone https://github.com/Clybius/aom-av1-lavish -b Endless_Merging aom-av1-lavish_em >/dev/null 2>>buildingErr.log || errorBuilding 'Could not clone aom-av1-lavish, check your Internet connection.'
-wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py >/dev/null 2>>buildingErr.log  || errorBuilding 'Could not get a python script, check your Internet connection.'
-echo 'You can now disconnect your device from the Internet.'
+git clone https://github.com/Clybius/aom-av1-lavish -b Endless_Merging aom-av1-lavish_em
+wget https://raw.githubusercontent.com/Lzhiyong/termux-ndk/master/patches/align_fix.py
+echo 'You can now disconnect your device from the Internet.' && sleep 1
 mkdir aom-av1-lavish_em/mybuild
 cd aom-av1-lavish_em/mybuild
-cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX >/dev/null 2>>buildingErr.log || errorBuilding "Could not configure aom-av1-lavish."
-make -kj$(nproc) 2>>buildingErr.log | awk '/%/ {printf "%s\r",substr($0,1,6); print > "cmd.log"}'
-aomCompile
-[ -f aomenc ] || errorBuilding 'Could not compile aom-av1-lavish.'
-find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {} &> /dev/null \; -exec strip {} \;
-make install &> /dev/null
+cmake .. -DCMAKE_BUILD_TYPE=Release $aomArgs -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" -DBUILD_SHARED_LIBS=0 --install-prefix $PREFIX
+make -kj$(nproc)
+#aomCompile
+[ -f aomenc ] || { echo 'Could not compile aom-av1-lavish.'; exit 1;}
+find . -type f -executable -not -path "./CMakeFiles/*" -exec python3 ../../align_fix.py {}\; -exec strip {} \;
+make install
 cd ../..
 # rm -rf align_fix.py aom-av1-lavish_em
 echo -e '\033[0;32mAom-av1-lavish installed successfully! Congratulations!\033[0m'
